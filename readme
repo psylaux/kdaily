@@ -1,0 +1,26 @@
+**V.01** - This project will accept a json of vocabulary objects. When the function runs, it will retrieve a vocab word and prompt it to the user as word of the day. Throughout the day you will be given 3 tasks to complete about this word. [Note this does not include time implementation]
+9 AM the word is prompted, ex.
+    '먹다라는 단어를 아세요?' - [Yes / No]
+    if yes, generate new word (be sure to not generate the same word agains)
+    if no, show the definition and sentence examples
+
+2 PM The definition will be provided and user will need to enter the right word:
+    q- To eat ?
+    a- 먹다
+
+6 PM The user will be given the word and two definitions. The user will respond with the correct definition
+    q- 먹다 
+    a-  a. to eat
+        b. to sleep
+
+9 PM 9 AM question will be reprompted
+
+V.02 This will create it as a discord dm bot
+
+V.03 This will include time implementation
+
+V.04 This will increase the complexity by introducing spaced repetition of the set over days
+
+V.05 Can include Natural Language Processing so the user can respond with their own definitions.
+
+v.10 Include AI 
