@@ -30,22 +30,6 @@ const commands = [
         name: 'hanaday',
         description: 'start word of the day'
     }   
-    // {
-    //     name: 'aye',
-    //     description: 'replies with domino',
-    // },
-    // {
-    //     name: 'native',
-    //     description: 'quiz on native numbers 1-100'
-    // },
-    // {
-    //     name: 'sino',
-    //     description: 'quiz on sino numbers'
-    // },
-    // {
-    //     name: 'hanaday',
-    //     description: 'start word of the day'
-    // }
 ];
 
 const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
