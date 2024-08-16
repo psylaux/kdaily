@@ -97,7 +97,6 @@ client.on('messageCreate', async (message) => {
 
 client.on('interactionCreate', async (interaction) => {
     if (!interaction.isChatInputCommand()) return;
-    console.log(interaction);
     if (interaction.commandName === 'aye') {
         interaction.reply('aye domino');
     };
@@ -105,48 +104,37 @@ client.on('interactionCreate', async (interaction) => {
         const min = interaction.options.get('low-limit')?.value || 1;
         const max = interaction.options.get('upper-limit')?.value || 100;
         let stop = false;
-        // Generate a random number between the range
-
-        //loop
-        // while (!stop) {
-    
+        await interaction.reply("Starting native korean numbers game! Reply 'stop' to quit.");
+        while (!stop) {
             let quiz = Math.floor(Math.random() * (max - min + 1)) + min;
-            console.log(`random value is ${quiz}`);
-            
-            console.log(`low value is ${min} and high value is ${max}`);
-            // Query the JSON for the solution
-
             let answer = native[quiz];
             console.log (`correct answer is ${answer}`);
 
-            await interaction.reply(`${quiz}?`);
+            await interaction.channel.send(`${quiz}?`);
             let correct = false;
-            const collector = interaction.channel.createMessageCollector({
-                filter: (message) => message.content === answer,
-                time: 30_000
-            });
 
-            collector.on('collect', (message) => {
-                if (message.content.toLowerCase() === 'stop') {
+            let filter = message => message.content === answer || message.content.toLowerCase() === 'stop';
+                let msgs = await interaction.channel.awaitMessages({filter, max: 1, time: 30_000});
+                let response = msgs.first();
+
+                if (response.content.toLowerCase() === 'stop') {
+                    await interaction.channel.send("Ending game. 잘 했다!");
                     stop = true;
-                }
-                    message.reply('Correct :D');
+                } else if (response.content === answer) {
+                    response.reply('Correct :D');
                     correct = true;
-                
-                collector.stop();
-            });
+                } else {
+                    response.reply(`Nope. The answer is ${answer}`);
+                    return;
+                }
 
-            collector.on('end', () => {
-                if (!correct) {
+                if (!correct && !stop) {
                     interaction.channel.send(
                         `Time ran out. The answer was **${answer}**`
                     )
                 }
-            }); 
         }
-        //   
-    
-
+    }
 })
 
 client.login(process.env.TOKEN)
