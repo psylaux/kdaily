@@ -53,6 +53,9 @@ const generateSinoValue = (value) => {
         else if (value < 20) {
             return sino["10"] + sino[digits[1]];
         }
+        else if (digits[1] === 0){
+            return sino[digits[0]] + sino["10"];
+        }
         else {
             return sino[digits[0]] + sino["10"] + sino[digits[1]];
         }
@@ -182,6 +185,9 @@ client.on('interactionCreate', async (interaction) => {
         }
     };
     if (interaction.commandName === "sino") {
+        let numCorrect = 0;
+        let total = 0;
+        let stop = false;
 
         const firstButton = new ButtonBuilder()
         .setLabel('1-10')
@@ -212,7 +218,7 @@ client.on('interactionCreate', async (interaction) => {
 
         const reply = await interaction.reply({content: 'Starting sino korean numbers game! Choose a range ⤵️. Say "stop" to quit', components: [buttonRow]});
 
-        const filter = () => true;
+        let filter = () => true;
         const collector = reply.createMessageComponentCollector({
             componentType: ComponentType.Button, filter
         });
@@ -223,42 +229,67 @@ client.on('interactionCreate', async (interaction) => {
                 case 'set-1': {
                     min = 1;
                     max = 10;
-                    await interaction.channel.send("clicked 1");
                     break;
                 }
                 case 'set-2': {
                     min = 10;
                     max = 100;
-                    await interaction.channel.send("clicked 2");
                     break;
                 }
                 case 'set-3': {
                     min = 100;
                     max = 1_000;
-                    await interaction.channel.send("clicked 3");
                     break;
                 }
                 case 'set-4': {
                     min = 1_000;
                     max = 10_000;
-                    await interaction.channel.send("clicked 4");
                     break;
                 }
                 case 'set-5': {
                     min = 10_000
                     max = 1_000_000
-                    await interaction.channel.send("clicked 5");
                     break;
                 }
             }
-            let quiz = Math.floor(Math.random() * (max - min + 1)) + min;
-            console.log (`digit answer is ${quiz}`);
 
-            let answer = generateSinoValue(quiz);
-            console.log (`correct answer is ${answer}`);
-    
-            // Copy message handling from the native one
+            while (!stop) {
+                total++;
+                let quiz = Math.floor(Math.random() * (max - min + 1)) + min;
+                await interaction.channel.send(`${quiz}?`);
+                console.log (`digit answer is ${quiz}`);
 
+                let answer = generateSinoValue(quiz);
+                console.log (`correct answer is ${answer}`);
+        
+                // Copied message handling from the native one
+
+                let msgs = await interaction.channel.awaitMessages({filter, max: 1, time: 180_000});
+                let response = msgs.first();
+
+                if (response.content.toLowerCase() === 'stop') {
+                    await interaction.channel.send(`Ending game. You got ${numCorrect}/${total} correct, 잘 했다!`);
+                    stop = true;
+                } else if (response.content === 'help') {
+                    await interaction.channel.send(`The answer is ${answer}. Reply with ${answer}:`);
+                    let filter2 = msg => msg.content === answer;
+                    let msgs2 = await interaction.channel.awaitMessages({filter2, max: 1, time: 180_000});
+                    if (msgs2.first().content === answer) {
+                        msgs2.first().reply('Great job! Keep going:)');
+                        correct = true;
+                    } else {
+                        response.reply(`Nope. The answer is ${answer}`);
+                    }
+                }
+                else if (response.content === answer) {
+                    response.reply('Correct :D');
+                    correct = true;
+                    numCorrect++;
+                } else {
+                    response.reply(`Nope. The answer is ${answer}`);
+                }
+            }
+            // 
 
         });
         
