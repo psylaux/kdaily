@@ -37,39 +37,27 @@ function capitalizeFirstLetter(str) {
     }
     return str.toLowerCase().charAt(0).toUpperCase() + str.slice(1);
 }
+// function formatVocabSetResponse(jsonObject) {
+//     let formattedResponse = "";
+//     for (let key in jsonObject) {
+//         if (jsonObject.hasOwnProperty(key)) {
+//             formattedResponse += `${key}: ${jsonObject[key].definition}\n`;
+//         }
+//     }
+//     return formattedResponse;
+// }
+
 client.on('ready', () => {
     console.log('Hanaday in the building!');
 })
 
-const IGNORE_PREFIX = "!";
+// const IGNORE_PREFIX = "!";
 const CHANNELS = [1272667552752992328];
 const openai = new OpenAI ({
     apiKey: process.env.OPENAI_KEY
 });
 
 const generateSinoValue = (num) => {
-    // value = parseInt(value);
-    // let digits = value.toString().split('').map(Number);
-    // if (value <= 10) {
-    //     return sino[value];
-    // } else if (value <= 100) {
-    //     if (value === 100) return sino[value];
-    //     else if (value < 20) {
-    //         return sino["10"] + sino[digits[1]];
-    //     }
-    //     else if (digits[1] === 0){
-    //         return sino[digits[0]] + sino["10"];
-    //     }
-    //     else {
-    //         return sino[digits[0]] + sino["10"] + sino[digits[1]];
-    //     }
-    // } else if (value <= 1000) {
-    //     if (value === 1000) return sino[value];
-    //     else if () {
-
-    //     }
-    // }
-
     const sinoKorean = {
         0: "공",
         1: "일",
@@ -84,13 +72,12 @@ const generateSinoValue = (num) => {
     };
 
     const units = ["", "십", "백", "천"];
-    const largeUnits = ["", "만", "억"]; // Extend for larger numbers, up to 100 million (억)
+    const largeUnits = ["", "만", "억"];
     
     let numStr = num.toString();
     let length = numStr.length;
     let result = "";
     
-    // Divide number into chunks of 4 digits from the end (for 만, 억, etc.)
     let chunkCount = Math.ceil(length / 4);
 
     for (let i = 0; i < chunkCount; i++) {
@@ -116,8 +103,8 @@ const generateSinoValue = (num) => {
 }
 
 client.on('messageCreate', async (message) => {
-    if (message.author.bot) return;
-    if (message.content.startsWith(IGNORE_PREFIX)) return;
+    // if (message.author.bot) return;
+    // if (message.content.startsWith(IGNORE_PREFIX)) return;
     //if (!CHANNELS.includes(message.channelId) && !message.mentions.users.has(client.user.id)) return;
 
     // await message.channel.sendTyping();
@@ -126,58 +113,33 @@ client.on('messageCreate', async (message) => {
     //     message.channel.sendTyping();
     // }, 5000)
 
-    let conversation = [];
-    conversation.push({
-        role: 'system',
-        content: 'Chat GPT is a friendly chatbot'
-    })
 
-    let prevMessages = await message.channel.messages.fetch({limit: 10});
-    prevMessages.reverse();
+    // let prevMessages = await message.channel.messages.fetch({limit: 10});
+    // prevMessages.reverse();
 
-    prevMessages.forEach((msg) => {
-        if (msg.author.bot && msg.author.id !== client.user.id) return;
-        if (msg.content.startsWith(IGNORE_PREFIX)) return;
+    // prevMessages.forEach((msg) => {
+    //     if (msg.author.bot && msg.author.id !== client.user.id) return;
+    //     // if (msg.content.startsWith(IGNORE_PREFIX)) return;
 
-        const username = msg.author.username.replace(/\s+/g, '_').replace(/[^\w\s]/gi, '');
+    //     const username = msg.author.username.replace(/\s+/g, '_').replace(/[^\w\s]/gi, '');
 
-        if (msg.author.id === client.user.id) {
-            conversation.push({
-                role: 'assistant',
-                name: username,
-                content: msg.content
-            });
-            return;
-        }
+    //     if (msg.author.id === client.user.id) {
+    //         conversation.push({
+    //             role: 'assistant',
+    //             name: username,
+    //             content: msg.content
+    //         });
+    //         return;
+    //     }
         
-        conversation.push({
-            role: 'user',
-            name: username,
-            content: msg.content
-        })
-    })
+    //     conversation.push({
+    //         role: 'user',
+    //         name: username,
+    //         content: msg.content
+    //     })
+    // })
 
-    // const response = await openai.chat.completions.create({
-    //         model: 'gpt-3.5-turbo',
-    //         messages: conversation
-    //     }).catch((error) => console.error('OpenAI Error:\n', error));
-
-    // clearInterval(sendTypingInterval);
-
-    // if (!response) {
-    //     message.reply("Having a brain fart. Pls try again later");
-    //     return;
-    // }
-
-    // const responseMessage = response.choices[0].message.content;
-
-    // const chunkSizeLimit = 2000;
-
-    // for (let i = 0; i < responseMessage.length; i += chunkSizeLimit) {
-    //     const chunk = responseMessage.substring(i, i + chunkSizeLimit);
-    //     await message.reply(chunk);
-    // }
-    // message.author.send('Big test');
+  
 })
 
 client.on('interactionCreate', async (interaction) => {
@@ -346,7 +308,8 @@ client.on('interactionCreate', async (interaction) => {
         });
     };
     if (interaction.commandName === "hanaday") {
-
+        const ACTIVE_SETS = new Map();
+        const userID = interaction.member.id;
         let topic, numDays, level;
 
         await interaction.reply("Yo. What kind of words you wanna learn?\nYou can say things like movies, gaming, space, technology, cooking, animals, etc. You can also say random.");
@@ -393,10 +356,63 @@ client.on('interactionCreate', async (interaction) => {
         })
 
         // Generate a set from OpenAI.
-        
-        // Display set to user
 
+        
+        let conversation = [];
+        let gptrequest = {
+            role: 'system',
+            content: `Can you please give me a json object of ${numDays} ${level} korean vocabulary words related to ${topic}? The object should have the korean word as the key and an object of the english definition, part of speech, and 2 example sentences as the value`
+        }
+        // conversation.push({
+            //     role: 'system',
+            //     content: 'Chat GPT is a friendly chatbot'
+            // })
+        conversation.push(gptrequest);
+            
+        // await interaction.channel.sendTyping();
+
+        const sendTypingInterval = setInterval(async () => {
+            await interaction.channel.sendTyping();
+        }, 5000)
+        const gptresponse = await openai.chat.completions.create({
+            model: 'gpt-3.5-turbo',
+            messages: conversation
+        }).catch((error) => console.error('OpenAI Error:\n', error));
+
+        if (!gptresponse) {
+            interaction.channel.send("Having a brain fart. Pls try again later");
+            return;
+        }
+
+        const responseJSON = JSON.parse(gptresponse.choices[0].message.content);
+
+        console.log(responseJSON);
+
+        // const chunkSizeLimit = 2000;
+
+        // for (let i = 0; i < responseJSON.length; i += chunkSizeLimit) {
+        //     const chunk = responseJSON.substring(i, i + chunkSizeLimit);
+        //     await interaction.channel.send(chunk);
+        // }
+
+        // Create an array of user ids and have the json as the value
+
+        ACTIVE_SETS.set(userID, responseJSON);
+        let formattedResponse = "";
+        for (let key in responseJSON) {
+            console.log (`key is ${key}`);
+            console.log (`definition is ${responseJSON[key].definition}`)
+            if (responseJSON.hasOwnProperty(key)) {
+                formattedResponse += `${key}: ${responseJSON[key].definition}\n`;
+            }
+        }
+        clearInterval(sendTypingInterval);
+
+        await interaction.channel.send(formattedResponse);
+        await interaction.channel.send("Looks good? Great. Let's get started tomorrow.");
+        
         // Set up dms
+        //message.author.send('Big test');
 
         // Set up daily generation
     }
