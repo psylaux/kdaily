@@ -31,7 +31,12 @@ fs.readFile('api/sino.json', 'utf8', (err, str) => {
        console.log('Error parson JSON string: ', err)
    }
 });
-
+function capitalizeFirstLetter(str) {
+    if (typeof str !== 'string') {
+        str = str.toString();
+    }
+    return str.toLowerCase().charAt(0).toUpperCase() + str.slice(1);
+}
 client.on('ready', () => {
     console.log('Hanaday in the building!');
 })
@@ -42,24 +47,72 @@ const openai = new OpenAI ({
     apiKey: process.env.OPENAI_KEY
 });
 
-const generateSinoValue = (value) => {
-    value = parseInt(value);
-    let digits = value.toString().split('').map(Number);
-    let answer;
-    if ( value <= 10) {
-        return sino[value];
-    } else if (value <= 100) {
-        if (value === 100) return sino[value];
-        else if (value < 20) {
-            return sino["10"] + sino[digits[1]];
+const generateSinoValue = (num) => {
+    // value = parseInt(value);
+    // let digits = value.toString().split('').map(Number);
+    // if (value <= 10) {
+    //     return sino[value];
+    // } else if (value <= 100) {
+    //     if (value === 100) return sino[value];
+    //     else if (value < 20) {
+    //         return sino["10"] + sino[digits[1]];
+    //     }
+    //     else if (digits[1] === 0){
+    //         return sino[digits[0]] + sino["10"];
+    //     }
+    //     else {
+    //         return sino[digits[0]] + sino["10"] + sino[digits[1]];
+    //     }
+    // } else if (value <= 1000) {
+    //     if (value === 1000) return sino[value];
+    //     else if () {
+
+    //     }
+    // }
+
+    const sinoKorean = {
+        0: "공",
+        1: "일",
+        2: "이",
+        3: "삼",
+        4: "사",
+        5: "오",
+        6: "육",
+        7: "칠",
+        8: "팔",
+        9: "구"
+    };
+
+    const units = ["", "십", "백", "천"];
+    const largeUnits = ["", "만", "억"]; // Extend for larger numbers, up to 100 million (억)
+    
+    let numStr = num.toString();
+    let length = numStr.length;
+    let result = "";
+    
+    // Divide number into chunks of 4 digits from the end (for 만, 억, etc.)
+    let chunkCount = Math.ceil(length / 4);
+
+    for (let i = 0; i < chunkCount; i++) {
+        let chunk = numStr.slice(-4 * (i + 1), length - 4 * i);
+        let chunkLength = chunk.length;
+        let chunkResult = "";
+
+        for (let j = 0; j < chunkLength; j++) {
+            let digit = chunk[j];
+            let sinoDigit = sinoKorean[digit];
+            
+            if (digit !== "0") {
+                chunkResult += sinoDigit + units[chunkLength - 1 - j];
+            }
         }
-        else if (digits[1] === 0){
-            return sino[digits[0]] + sino["10"];
-        }
-        else {
-            return sino[digits[0]] + sino["10"] + sino[digits[1]];
+
+        if (chunkResult) {
+            result = chunkResult + largeUnits[i] + result;
         }
     }
+
+    return result || sinoKorean[0];
 }
 
 client.on('messageCreate', async (message) => {
@@ -141,7 +194,7 @@ client.on('interactionCreate', async (interaction) => {
         let total = 0;
         let numCorrect = 0;
         let stop = false;
-        await interaction.reply("Starting native korean numbers game! Reply 'stop' to quit.");
+        await interaction.reply("Starting native korean numbers game! Reply 'stop' to quit, reply 'help' when you don't know.");
         while (!stop) {
             total++;
             let quiz = Math.floor(Math.random() * (max - min + 1)) + min;
@@ -156,6 +209,7 @@ client.on('interactionCreate', async (interaction) => {
             let response = msgs.first();
 
             if (response.content.toLowerCase() === 'stop') {
+                total--;
                 await interaction.channel.send(`Ending game. You got ${numCorrect}/${total} correct, 잘 했다!`);
                 stop = true;
             } else if (response.content === 'help') {
@@ -216,7 +270,7 @@ client.on('interactionCreate', async (interaction) => {
 
         const buttonRow = new ActionRowBuilder().addComponents(firstButton, secondButton, thirdButton, fourthButton, fifthButton);
 
-        const reply = await interaction.reply({content: 'Starting sino korean numbers game! Choose a range ⤵️. Say "stop" to quit', components: [buttonRow]});
+        const reply = await interaction.reply({content: 'Starting sino korean numbers game! Choose a range ⤵️. ', components: [buttonRow]});
 
         let filter = () => true;
         const collector = reply.createMessageComponentCollector({
@@ -225,6 +279,7 @@ client.on('interactionCreate', async (interaction) => {
 
         let min, max;
         collector.on('collect', async (interaction) => {
+            await interaction.reply("Lets go! Reply 'stop' to quit, and reply 'help' when you don't know the answer.");
             switch (interaction.customId) {
                 case 'set-1': {
                     min = 1;
@@ -261,13 +316,12 @@ client.on('interactionCreate', async (interaction) => {
 
                 let answer = generateSinoValue(quiz);
                 console.log (`correct answer is ${answer}`);
-        
-                // Copied message handling from the native one
-
+    
                 let msgs = await interaction.channel.awaitMessages({filter, max: 1, time: 180_000});
                 let response = msgs.first();
 
                 if (response.content.toLowerCase() === 'stop') {
+                    total--;
                     await interaction.channel.send(`Ending game. You got ${numCorrect}/${total} correct, 잘 했다!`);
                     stop = true;
                 } else if (response.content === 'help') {
@@ -289,14 +343,62 @@ client.on('interactionCreate', async (interaction) => {
                     response.reply(`Nope. The answer is ${answer}`);
                 }
             }
-            // 
-
         });
-        
-
     };
     if (interaction.commandName === "hanaday") {
 
+        let topic, numDays, level;
+
+        await interaction.reply("Yo. What kind of words you wanna learn?\nYou can say things like movies, gaming, space, technology, cooking, animals, etc. You can also say random.");
+        let filter = message => !message.author.bot;
+        let msgs = await interaction.channel.awaitMessages({filter, max: 1, time: 180_000});
+        let response = msgs.first();
+        topic = response;
+
+        await interaction.channel.send(`${capitalizeFirstLetter(response)} is so amazing. How many days do you wanna learn this for?`);
+        msgs = await interaction.channel.awaitMessages({filter, max: 1, time: 180_000});
+        response = msgs.first();
+        numDays = response;
+
+        const firstButton = new ButtonBuilder()
+        .setLabel('Beginner')
+        .setStyle(ButtonStyle.Primary)
+        .setCustomId('beg');
+
+        const secondButton = new ButtonBuilder()
+        .setLabel('Intermediate')
+        .setStyle(ButtonStyle.Primary)
+        .setCustomId('int');
+
+        const thirdButton = new ButtonBuilder()
+        .setLabel('Advanced')
+        .setStyle(ButtonStyle.Primary)
+        .setCustomId('adv');
+
+        const buttonRow = new ActionRowBuilder().addComponents(firstButton, secondButton, thirdButton);
+        const reply = await interaction.channel.send({content: 'Spice level? ', components: [buttonRow]});
+
+        filter = () => true;
+        const collector = reply.createMessageComponentCollector({
+            componentType: ComponentType.Button, filter
+        });
+
+        collector.on('collect', async (interaction) => {
+            await interaction.reply("Cookin' up a storm, piece of cake (cake cake cake)...");
+            switch (interaction.customId) {
+                case "beg": level = 'beginner';
+                case "int": level = 'intermediate';
+                case "adv": level = 'difficult';
+            }
+        })
+
+        // Generate a set from OpenAI.
+        
+        // Display set to user
+
+        // Set up dms
+
+        // Set up daily generation
     }
 })
 
