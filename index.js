@@ -2,6 +2,7 @@ require('dotenv/config');
 const { Client, ButtonBuilder, ButtonStyle, ActionRowBuilder, ComponentType } = require('discord.js');
 const { OpenAI } = require('openai');
 const fs = require('fs');
+const cron = require('node-cron');
 
 let native, sino = {};
 const client = new Client({
@@ -16,7 +17,7 @@ fs.readFile('api/native.json', 'utf8', (err, str) => {
        const data = JSON.parse(str);
        native = data;
    } catch (err) {
-       console.log('Error parson JSON string: ', err)
+       console.log('Error parsing JSON string: ', err)
    }
 });
 fs.readFile('api/sino.json', 'utf8', (err, str) => {
@@ -354,19 +355,13 @@ client.on('interactionCreate', async (interaction) => {
                 case "adv": level = 'difficult';
             }
         })
-
-        // Generate a set from OpenAI.
-
         
         let conversation = [];
         let gptrequest = {
             role: 'system',
-            content: `Can you please give me a json object of ${numDays} ${level} korean vocabulary words related to ${topic}? The object should have the korean word as the key and an object of the english definition, part of speech, and 2 example sentences as the value`
+            content: `Please provide a json object of ${numDays} ${level} korean vocabulary words related to ${topic}. The object should have the korean word as the key and an object of the word number ("num"), english definition, part of speech, and an explanation of its use case as the value.`
         }
-        // conversation.push({
-            //     role: 'system',
-            //     content: 'Chat GPT is a friendly chatbot'
-            // })
+    
         conversation.push(gptrequest);
             
         // await interaction.channel.sendTyping();
@@ -412,9 +407,16 @@ client.on('interactionCreate', async (interaction) => {
         await interaction.channel.send("Looks good? Great. Let's get started tomorrow.");
         
         // Set up dms
-        //message.author.send('Big test');
+        
+        // Find how to send it daily at the same time
 
-        // Set up daily generation
+        cron.schedule('30 14 * * *', async () => {
+            
+            message.author.send('Big test');
+        });
+
+        // Set up database
+        // Save sets after completion with perms from user
     }
 })
 

@@ -1,7 +1,9 @@
 {
   "dependencies": {
+    "aws-sdk": "^2.1679.0",
     "discord.js": "^14.15.3",
     "dotenv": "^16.4.5",
+    "node-cron": "^3.0.3",
     "openai": "^4.55.5"
   }
 }

@@ -1,5 +1,13 @@
 - complete hanaday set up
+    - set up timed dm sends
+    - allow up to 3 set regenerations
+- make it usable on new servers
 
 
 Stretch
 - add in a database system
+    - add in more commands in dynamo.js
+    - connect it to index.js
+- watch a few videos on spaced repetition
+
+- Write about what Node and Express is
