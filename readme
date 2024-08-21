@@ -39,6 +39,7 @@ Same time every day just send the word and definition to the user's dms.
 Possible data points:
 - userid: str
 - username: str
+- activeSet: false
 - activeDayNumber: int
 - totalDayNumber: int
 - timeToSend: time
@@ -46,6 +47,6 @@ Possible data points:
 - topics: {Object}
 
 - activeVocabSet: Table
-    [userid, username, words [korean word { num, definition, part of speech, level }], confidence, sent:bool, dateSent: date, save:bool]
+    [userid, username, words [num { korean word , definition, part of speech}]]
 - savedVocabSet: Table
     [userid, username, korean word { definition, part of speech, level , sent:bool, confidence, dateSent: date, save:bool}]

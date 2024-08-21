@@ -3,6 +3,7 @@ const { Client, ButtonBuilder, ButtonStyle, ActionRowBuilder, ComponentType } = 
 const { OpenAI } = require('openai');
 const fs = require('fs');
 const cron = require('node-cron');
+const db = require('./dynamo');
 
 let native, sino = {};
 const client = new Client({
@@ -38,21 +39,11 @@ function capitalizeFirstLetter(str) {
     }
     return str.toLowerCase().charAt(0).toUpperCase() + str.slice(1);
 }
-// function formatVocabSetResponse(jsonObject) {
-//     let formattedResponse = "";
-//     for (let key in jsonObject) {
-//         if (jsonObject.hasOwnProperty(key)) {
-//             formattedResponse += `${key}: ${jsonObject[key].definition}\n`;
-//         }
-//     }
-//     return formattedResponse;
-// }
 
 client.on('ready', () => {
     console.log('Hanaday in the building!');
 })
 
-// const IGNORE_PREFIX = "!";
 const CHANNELS = [1272667552752992328];
 const openai = new OpenAI ({
     apiKey: process.env.OPENAI_KEY
@@ -102,46 +93,12 @@ const generateSinoValue = (num) => {
 
     return result || sinoKorean[0];
 }
-
-client.on('messageCreate', async (message) => {
-    // if (message.author.bot) return;
-    // if (message.content.startsWith(IGNORE_PREFIX)) return;
-    //if (!CHANNELS.includes(message.channelId) && !message.mentions.users.has(client.user.id)) return;
-
-    // await message.channel.sendTyping();
-
-    // const sendTypingInterval = setInterval(() => {
-    //     message.channel.sendTyping();
-    // }, 5000)
-
-
-    // let prevMessages = await message.channel.messages.fetch({limit: 10});
-    // prevMessages.reverse();
-
-    // prevMessages.forEach((msg) => {
-    //     if (msg.author.bot && msg.author.id !== client.user.id) return;
-    //     // if (msg.content.startsWith(IGNORE_PREFIX)) return;
-
-    //     const username = msg.author.username.replace(/\s+/g, '_').replace(/[^\w\s]/gi, '');
-
-    //     if (msg.author.id === client.user.id) {
-    //         conversation.push({
-    //             role: 'assistant',
-    //             name: username,
-    //             content: msg.content
-    //         });
-    //         return;
-    //     }
-        
-    //     conversation.push({
-    //         role: 'user',
-    //         name: username,
-    //         content: msg.content
-    //     })
-    // })
-
-  
-})
+const setCompleted = async (userid, username) => {
+    await db.deleteActiveSet(userid);
+    await db.setActiveSetToFalse(userid, username);
+    await db.setActiveDayNumberById(userid, username, 0);
+    await db.setTotalDayNumberById(userid, username, 0);
+}
 
 client.on('interactionCreate', async (interaction) => {
     if (!interaction.isChatInputCommand()) return;
@@ -309,9 +266,20 @@ client.on('interactionCreate', async (interaction) => {
         });
     };
     if (interaction.commandName === "hanaday") {
-        const ACTIVE_SETS = new Map();
-        const userID = interaction.member.id;
-        let topic, numDays, level;
+        const userid = interaction.member.user.id;
+        const username = interaction.member.user.username;
+        let topic, activeDays, totalDays, level, newUser;
+
+        if (await db.isInUsersTable(userid)) {
+            if (await db.hasActiveSetBool(userid, username)) {
+                interaction.reply("You already have an active set.");
+                return;
+            } else {
+                newUser = false;
+            }
+        } else newUser = true;
+
+        console.log ("new user is", newUser, userid, username);
 
         await interaction.reply("Yo. What kind of words you wanna learn?\nYou can say things like movies, gaming, space, technology, cooking, animals, etc. You can also say random.");
         let filter = message => !message.author.bot;
@@ -322,7 +290,7 @@ client.on('interactionCreate', async (interaction) => {
         await interaction.channel.send(`${capitalizeFirstLetter(response)} is so amazing. How many days do you wanna learn this for?`);
         msgs = await interaction.channel.awaitMessages({filter, max: 1, time: 180_000});
         response = msgs.first();
-        numDays = response;
+        totalDays = response.content;
 
         const firstButton = new ButtonBuilder()
         .setLabel('Beginner')
@@ -359,7 +327,7 @@ client.on('interactionCreate', async (interaction) => {
         let conversation = [];
         let gptrequest = {
             role: 'system',
-            content: `Please provide a json object of ${numDays} ${level} korean vocabulary words related to ${topic}. The object should have the korean word as the key and an object of the word number ("num"), english definition, part of speech, and an explanation of its use case as the value.`
+            content: `Please provide a json object of ${totalDays} ${level} korean vocabulary words related to this topic: ${topic}. The object should have the word number as the key and an object of the korean word, english definition, part of speech, and an explanation of its use case as the value. (keys: "korean_word", "english_definition", "part_of_speech", "explanation)`
         }
     
         conversation.push(gptrequest);
@@ -383,40 +351,43 @@ client.on('interactionCreate', async (interaction) => {
 
         console.log(responseJSON);
 
-        // const chunkSizeLimit = 2000;
-
-        // for (let i = 0; i < responseJSON.length; i += chunkSizeLimit) {
-        //     const chunk = responseJSON.substring(i, i + chunkSizeLimit);
-        //     await interaction.channel.send(chunk);
-        // }
-
-        // Create an array of user ids and have the json as the value
-
-        ACTIVE_SETS.set(userID, responseJSON);
         let formattedResponse = "";
         for (let key in responseJSON) {
             console.log (`key is ${key}`);
-            console.log (`definition is ${responseJSON[key].definition}`)
+            console.log(`word is ${responseJSON[key].korean_word}`);
+            console.log (`definition is ${responseJSON[key].english_definition}`)
             if (responseJSON.hasOwnProperty(key)) {
-                formattedResponse += `${key}: ${responseJSON[key].definition}\n`;
+                formattedResponse += `${responseJSON[key].korean_word}: ${responseJSON[key].english_definition}\n`;
             }
         }
         clearInterval(sendTypingInterval);
 
         await interaction.channel.send(formattedResponse);
-        await interaction.channel.send("Looks good? Great. Let's get started tomorrow.");
+        await interaction.channel.send("Great. Let's get started tomorrow.");
         
-        // Set up dms
-        
-        // Find how to send it daily at the same time
-
-        cron.schedule('30 14 * * *', async () => {
-            
-            message.author.send('Big test');
-        });
-
         // Set up database
-        // Save sets after completion with perms from user
+        console.log("Hey iTS ME", userid, username);
+        
+        if (newUser) {
+            await db.createNewUser(userid, username, true, 0, totalDays, "14:30", false, null);
+        } else {
+            await db.setActiveSetToTrue(userid, username);
+            await db.setTotalDayNumberById(userid, username, totalDays);
+        }
+        
+        await db.createNewActiveSet(userid, username, responseJSON);
+
+        interaction.member.user.send(`Hey ${username}, I'll be back later with a daily word for you.`);
+     
+        const job = cron.schedule('30 15 * * *', async () => {
+            await db.incrementActiveDayNumberById(userid, username);
+            const nextWord = await db.getNextVocabWordToSend(userid, username);
+            interaction.member.user.send(nextWord.korean_word, nextWord.definition);
+            if (await db.isLastDay(userid, username)) {
+                setCompleted();
+                job.stop();
+            }
+        });
     }
 })
 

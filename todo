@@ -1,13 +1,31 @@
+- create the code to insert my user into the database
+    - when i run /hanaday, check if my userid exists in the users table,
+        - if not, add my user
+        - if it does, check if it is already in an active set
+            - if active set is true
+                - you already have an active set. 
+                - do you want to stop it?
+        - else continue to creating set
+    - when set is created, parse it and add it to the activeSet table
+        - be sure to also set users table active set to true
+    - every day at 2:30pm send one item to my dms
+        - increment activeDayNumber and use that number to get the correct word to send
+        - when activeDayNumber = totalDayNumber, this is the last day.
+            - create a function: setCompleted
+                - delete set from activesets after sending
+                - set active in users table to false
+                - reset data to 0
+
+- you may need to create a separate worker file that watches just the userid, username
+
+
 - complete hanaday set up
-    - set up timed dm sends
-    - allow up to 3 set regenerations
+    - allow up to 2 set regenerations
+        - pull out the generation code into a function
 - make it usable on new servers
 
 
 Stretch
-- add in a database system
-    - add in more commands in dynamo.js
-    - connect it to index.js
 - watch a few videos on spaced repetition
 
 - Write about what Node and Express is
