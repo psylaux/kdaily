@@ -1,39 +1,3 @@
-9 AM the word is prompted, ex.
-    
-2 PM The definition will be provided and user will need to enter the right word:
-    q- To eat ?
-    a- 먹다
-
-6 PM The user will be given the word and two definitions. The user will respond with the correct definition
-    q- 먹다 
-    a-  a. to eat
-        b. to sleep
-
-V.03 This will include time implementation
-
-V.04 This will increase the complexity by introducing spaced repetition of the set over days
-
-V.05 Can include Natural Language Processing so the user can respond with their own definitions.
-
-
-
-Sample Conversation.
-/aye domino
-Hanaday: Yo. What kind of words you tryna learn? You can also say random.
-> Gaming
-Hanaday: <input> is so amazing. How long do you wanna learn this for?
-> 7 days
-Hanaday: Spice level?
-> Beginner, Intermediate, Advanced, Any.
-Hanaday: Generating your vocab set....
-*displays set*
-Hanaday: Looks good?
-<Yes> <Regenerate>
-> Yes
-> Solid. I'll hit you up in a bit.
-
-...
-Same time every day just send the word and definition to the user's dms.
 
 
 Possible data points:
